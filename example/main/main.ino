@@ -10,9 +10,8 @@
 ///////////////////////////////////////
 
 #include <MP.h>
-#include <SDHCI.h>
-#include <Audio.h>
 #include <Camera.h>
+#include <SP_AudioPlayer.h>
 #include "music_led_performer.h"
 
 //Configuration
@@ -27,14 +26,11 @@
 
 //For Audio
 #if defined(USE_AUDIO)
-  SDClass theSD;
-  AudioClass *theAudio = NULL;
-  File myFile;
-  bool ErrEnd = false;
+  SP_AudioPlayer* theSpAudio = NULL;
+  const char g_fileName[] = {"Sound.mp3"};
 #endif
 
 // Declaration of function
-static void audio_attention_cb(const ErrorAttentionParam *atprm);
 static bool control_audio(MSG_CMD cmd);
 static bool control_led_strap(MSG_CMD cmd);
 static void CamCB(CamImage img);
@@ -46,37 +42,26 @@ static void loop_audio();
 //void loop();
 
 ///////////////////////////////////////
-/**
- * @brief Audio attention callback
- *
- * When audio internal error occurs, this function will be called back.
- */
-static void audio_attention_cb(const ErrorAttentionParam *atprm)
-{
-  puts("Attention!");
-  
-  if (atprm->error_code >= AS_ATTENTION_CODE_WARNING)
-    {
-      ErrEnd = true;
-   }
-}
-
-///////////////////////////////////////
 static bool control_audio(MSG_CMD cmd)
 {
   bool ret = true;
   
   switch(cmd){
     case MSG_CMD_RUN:
-      theAudio->writeFrames(AudioClass::Player0, myFile);
-      theAudio->startPlayer(AudioClass::Player0);
+      if(theSpAudio->isPaused()){
+        theSpAudio->resume();
+      }
+      else if(theSpAudio->isStopped()){
+        theSpAudio->mp3play(g_fileName, false);
+      }
+      break;
+    
     case MSG_CMD_STILL:
-      theAudio->stopPlayer(AudioClass::Player0);
+      theSpAudio->pause();
       break;
 
     case MSG_CMD_STOP:
-      theAudio->stopPlayer(AudioClass::Player0);
-      myFile.seek(0);
+      theSpAudio->stop();
       break;
 
     default:
@@ -101,7 +86,7 @@ static void CamCB(CamImage img)
 {
   static bool cb_on = false;
 
-  Serial.println("CamCB called");
+//  Serial.println("CamCB called");
 
   if(!(cb_on = !cb_on))
     return ;
@@ -128,78 +113,13 @@ static void CamCB(CamImage img)
 ///////////////////////////////////////
 static bool setup_audio()
 {
-  /* Initialize SD */
-  while (!theSD.begin()){
-      /* wait until SD card is mounted. */
-      Serial.println("Insert SD card.");
-  }
+  theSpAudio = new SP_AudioPlayer;
+  theSpAudio->begin();
+  theSpAudio->volume(-200);
 
-  // start audio system
-  theAudio = AudioClass::getInstance();
+  theSpAudio->mp3play(g_fileName, false);
 
-  theAudio->begin(audio_attention_cb);
-
-  puts("initialization Audio Library");
-
-  /* Set clock mode to normal */
-  theAudio->setRenderingClockMode(AS_CLKMODE_NORMAL);
-
-  /* Set output device to speaker with first argument.
-   * If you want to change the output device to I2S,
-   * specify "AS_SETPLAYER_OUTPUTDEVICE_I2SOUTPUT" as an argument.
-   * Set speaker driver mode to LineOut with second argument.
-   * If you want to change the speaker driver mode to other,
-   * specify "AS_SP_DRV_MODE_1DRIVER" or "AS_SP_DRV_MODE_2DRIVER" or "AS_SP_DRV_MODE_4DRIVER"
-   * as an argument.
-   */
-  err_t err = theAudio->setPlayerMode(AS_SETPLAYER_OUTPUTDEVICE_SPHP, AS_SP_DRV_MODE_LINEOUT);
-  if(err != AUDIOLIB_ECODE_OK){
-      printf("setPlayerMode() 1 error %d\n", err);
-      exit(1);
-  }
-
-//  err = theAudio->setPlayerMode(AS_SETPLAYER_OUTPUTDEVICE_SPHP, 96*1024, 4);
-  if(err != AUDIOLIB_ECODE_OK){
-      printf("setPlayerMode() 2 error %d\n", err);
-      exit(1);
-  }
-
-  /*
-   * Set main player to decode stereo mp3. Stream sample rate is set to "auto detect"
-   * Search for MP3 decoder in "/mnt/sd0/BIN" directory
-   */
-  err = theAudio->initPlayer(AudioClass::Player0, AS_CODECTYPE_MP3, "/mnt/sd0/BIN", AS_SAMPLINGRATE_AUTO, AS_CHANNEL_STEREO);
-
-  /* Verify player initialize */
-  if(err != AUDIOLIB_ECODE_OK){
-      printf("Player0 initialize error\n");
-      exit(1);
-  }
-
-  /* Open file placed on SD card */
-  myFile = theSD.open("Sound.mp3");
-
-  /* Verify file open */
-  if(!myFile){
-      printf("File open error\n");
-      exit(1);
-  }
-  printf("Open! 0x%08lx\n", (uint32_t)myFile);
-
-  //Send first frames to be decoded
-  err = theAudio->writeFrames(AudioClass::Player0, myFile);
-
-  if((err != AUDIOLIB_ECODE_OK) && (err != AUDIOLIB_ECODE_FILEEND)){
-      printf("File Read Error! =%d\n",err);
-      myFile.close();
-      exit(1);
-  }
-
-  puts("Play!");
-
-  /* Main volume set to -16.0 dB */
-  theAudio->setVolume(-160);
-  theAudio->startPlayer(AudioClass::Player0);  
+  Serial.println("SP_Audio Ready!");
 
   return true;
 }
@@ -246,51 +166,6 @@ static bool setup_multi_core()
 }
 
 ///////////////////////////////////////
-static void loop_audio()
-{
-  /* Send new frames to decode in a loop until file ends */
-  int err = theAudio->writeFrames(AudioClass::Player0, myFile);
-
-  /*  Tell when player file ends */
-  if (err == AUDIOLIB_ECODE_FILEEND){
-      printf("Main player File End!\n");
-  }
-
-  /* Show error code from player and stop */
-  if (err){
-      printf("Main player error code: %d\n", err);
-      goto stop_player;
-  }
-
-  if (ErrEnd){
-      printf("Error End\n");
-      goto stop_player;
-  }
-
-  /* This sleep is adjusted by the time to read the audio stream file.
-   * Please adjust in according with the processing contents
-   * being processed at the same time by Application.
-   *
-   * The usleep() function suspends execution of the calling thread for usec
-   * microseconds. But the timer resolution depends on the OS system tick time
-   * which is 10 milliseconds (10,000 microseconds) by default. Therefore,
-   * it will sleep for a longer time than the time requested here.
-   */
-
-  usleep(40000);
-
-  /* Don't go further and continue play */
-  return;
-
-stop_player:
-  theAudio->stopPlayer(AudioClass::Player0);
-  myFile.close();
-  theAudio->setReadyMode();
-  theAudio->end();
-  exit(1);
-}
-
-///////////////////////////////////////
 /**
  * @brief Setup audio player to play mp3 file
  *
@@ -334,30 +209,42 @@ void loop()
 {
 //  puts("loop!!");
 
+  static MSG_CMD last_received_cmd = MSG_CMD_UNK;
+
 #if defined(USE_SUB_LCD_QUIRC)
   int8_t msgid =0; 
   uint32_t msg;
+  //QRCODEによる指示。Audioのみ制御
   if(MP.Recv(&msgid, &msg, SUB_LCD_QUIRC)==MSGIDs_CMD){
     //Commandによる制御
     Serial.printf("cmd = %d \n", msg);
     
     //Audio制御
-    control_audio(MSG_CMD(msg));
-
-#if defined(USE_SUB_LED_STRAP)
-    //LED Strap制御
-    control_led_strap(MSG_CMD(msg));
-#endif  //USE_SUB_LED_STRAP
-
+    last_received_cmd = msg;
+    control_audio(last_received_cmd);
   }
 #endif  //USE_SUB_LCD_QUIRC
 
-  //Send new frames to decode in a loop until file ends
+  //File-endによるStop状態 -> 先頭から再生
+  if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP){
+    control_audio(MSG_CMD_RUN);
+  }
 
 #if defined(USE_AUDIO)
-  loop_audio();
-
-#else
+  #if defined(USE_SUB_LED_STRAP)
+  //LED StrapはAudioに連動
+  static MSG_CMD last_sent_cmd = MSG_CMD_UNK;
+  if(last_sent_cmd!=MSG_CMD_STOP && (theSpAudio->isStopped() || theSpAudio->isPaused())){
+    //LED Strap制御
+    Serial.println("strap stop");
+    control_led_strap(last_sent_cmd = MSG_CMD_STOP);
+  }
+  else if(last_sent_cmd!=MSG_CMD_RUN && theSpAudio->isPlaying()){
+    Serial.println("strap run");
+    control_led_strap(last_sent_cmd = MSG_CMD_RUN);
+  }
+  #endif  //USE_SUB_LED_STRAP
+#else //USE_AUDIO
   delay(100);
 
 #endif //USE_AUDIO
