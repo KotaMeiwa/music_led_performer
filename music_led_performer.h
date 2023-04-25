@@ -94,10 +94,22 @@ void loop_quirc(uint16_t img565[], MSG_CMD* cmd)
     while(1); // fatal error to enter the infinite loop (stop process)
   }
 
-  // copy gray scale image
+
+  //Green scale
   for(int n = 0; n < w * h; ++n) {
     image[n] = (img565[n] & 0x7E0) >> 5; // extract g image
   }
+  //GreenでもGray ScaleでもQR読み込み精度はあんまり変わらない
+/*
+  //Gray scale
+  for(int n = 0; n < w * h; ++n) {    
+    int R = (img565[n] & 0xF800) >> 8;
+    int G = (img565[n] & 0x07E0) >> 3;
+    int B = (img565[n] & 0x001F) << 3;
+    image[n] = uint8_t(0.212671f*float(R) + 0.715160f*float(G) + 0.072169f*float(B));
+  }
+*/
+
   quirc_end(qr);
   
   int num_codes = quirc_count(qr);

@@ -57,11 +57,15 @@ static bool control_audio(MSG_CMD cmd)
       break;
     
     case MSG_CMD_STILL:
-      theSpAudio->pause();
+      if(!theSpAudio->isPaused()){
+        theSpAudio->pause();
+      }
       break;
 
     case MSG_CMD_STOP:
-      theSpAudio->stop();
+      if(!theSpAudio->isStopped()){
+        theSpAudio->stop();
+      }
       break;
 
     default:
