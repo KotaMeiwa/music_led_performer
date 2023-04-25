@@ -8,7 +8,7 @@
 const uint16_t NUM_PIXELS = 8;
 const uint16_t PIN = 0;
 
-Adafruit_NeoPixel_Spresense neopixel(NUM_PIXELS, PIN);
+Adafruit_NeoPixel_Spresense* neopixel = NULL;;
 
 ///////////////////////////////////////
 void setup()
@@ -22,7 +22,8 @@ void setup()
 	delay(1000);
 	Serial.println("serial console start!");
 
-	neopixel.begin();
+  neopixel = new Adafruit_NeoPixel_Spresense(NUM_PIXELS, PIN);
+	neopixel->begin();
 }
 
 ///////////////////////////////////////
@@ -41,10 +42,10 @@ void loop()
 
   if(on){
     //Blink
-    neopixel.fill(Adafruit_NeoPixel::Color(8, 8, 0)); neopixel.show(), delay(500);
-    neopixel.fill(Adafruit_NeoPixel::Color(8, 0, 0)); neopixel.show(), delay(500);
+    neopixel->fill(Adafruit_NeoPixel::Color(8, 8, 0)); neopixel->show(), delay(500);
+    neopixel->fill(Adafruit_NeoPixel::Color(8, 0, 0)); neopixel->show(), delay(500);
   }
   else{
-    neopixel.fill(Adafruit_NeoPixel::Color(0, 0, 0)); neopixel.show(), delay(500);
+    neopixel->fill(Adafruit_NeoPixel::Color(0, 0, 0)); neopixel->show(), delay(500);
   }
 }

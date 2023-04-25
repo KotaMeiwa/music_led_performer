@@ -88,8 +88,8 @@ static void CamCB(CamImage img)
 
 //  Serial.println("CamCB called");
 
-  if(!(cb_on = !cb_on))
-    return ;
+//  if(!(cb_on = !cb_on))
+//    return ;
 
   if(!img.isAvailable())
     return;
@@ -211,7 +211,8 @@ void loop()
 
   static MSG_CMD last_received_cmd = MSG_CMD_UNK;
 
-#if defined(USE_SUB_LCD_QUIRC)
+#if defined(USE_AUDIO)
+  #if defined(USE_SUB_LCD_QUIRC)
   int8_t msgid =0; 
   uint32_t msg;
   //QRCODEによる指示。Audioのみ制御
@@ -223,14 +224,13 @@ void loop()
     last_received_cmd = msg;
     control_audio(last_received_cmd);
   }
-#endif  //USE_SUB_LCD_QUIRC
+  #endif  //USE_SUB_LCD_QUIRC
 
   //File-endによるStop状態 -> 先頭から再生
   if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP){
     control_audio(MSG_CMD_RUN);
   }
 
-#if defined(USE_AUDIO)
   #if defined(USE_SUB_LED_STRAP)
   //LED StrapはAudioに連動
   static MSG_CMD last_sent_cmd = MSG_CMD_UNK;
