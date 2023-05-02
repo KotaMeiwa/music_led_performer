@@ -14,6 +14,8 @@
 #define TFT_RST 8
 #define IMG_H 160
 #define IMG_V 120
+#define LCD_ORIGIN_X ((320-IMG_H)/2)
+#define LCD_ORIGIN_Y ((240-IMG_V)/2)
 Adafruit_ILI9341* theTft = NULL;
 
 //for quirc
@@ -79,11 +81,13 @@ bool setup_quirc()
 ///////////////////////////////////////
 void loop_lcd(uint16_t img565[])
 {
-  theTft->drawRGBBitmap(0, 0, img565, IMG_H, IMG_V); 
+  theTft->drawRGBBitmap(LCD_ORIGIN_X, LCD_ORIGIN_Y,
+    img565,
+    IMG_H, IMG_V);
 }
 
 ///////////////////////////////////////
-void loop_quirc(uint16_t img565[], MSG_CMD* cmd)
+void loop_quirc(uint16_t img565[], MSG_CMD* cmd, struct quirc_code** qrcode=NULL)
 {
   *cmd = MSG_CMD_UNK;
 
@@ -94,10 +98,10 @@ void loop_quirc(uint16_t img565[], MSG_CMD* cmd)
     while(1); // fatal error to enter the infinite loop (stop process)
   }
 
-
   //Green scale
   for(int n = 0; n < w * h; ++n) {
-    image[n] = (img565[n] & 0x7E0) >> 5; // extract g image
+    image[n] = (img565[n] & 0x7E0) >> 3; // extract g image
+//    image[n] = (img565[n] & 0x7E0) >> 5; // extract g image
   }
   //GreenでもGray ScaleでもQR読み込み精度はあんまり変わらない
 /*
@@ -112,14 +116,14 @@ void loop_quirc(uint16_t img565[], MSG_CMD* cmd)
 
   quirc_end(qr);
   
-  int num_codes = quirc_count(qr);
-  Serial.println("num codes: " + String(num_codes));
-
   static struct quirc_code code;
   static struct quirc_data data;
 
   //decodeするのは1つだけ
+  int num_codes = quirc_count(qr);
   if(0 < num_codes){
+    Serial.println("num codes: " + String(num_codes));
+
     quirc_decode_error_t err;
     quirc_extract(qr, 0, &code);
     err = quirc_decode(&code, &data);
@@ -130,6 +134,7 @@ void loop_quirc(uint16_t img565[], MSG_CMD* cmd)
     else{
       printf("Data: %s\n", data.payload);
       *cmd = chk_quirc_data(&data);
+      qrcode? (*qrcode = &code): NULL;
     }
   }
 }

@@ -57,7 +57,7 @@ static bool control_audio(MSG_CMD cmd)
       break;
     
     case MSG_CMD_STILL:
-      if(!theSpAudio->isPaused()){
+      if(theSpAudio->isPlaying()){
         theSpAudio->pause();
       }
       break;
@@ -222,7 +222,7 @@ void loop()
   //QRCODEによる指示。Audioのみ制御
   if(MP.Recv(&msgid, &msg, SUB_LCD_QUIRC)==MSGIDs_CMD){
     //Commandによる制御
-    Serial.printf("cmd = %d \n", msg);
+    Serial.printf("cmd = %d, audio status=%d \n", msg, theSpAudio->readState());
     
     //Audio制御
     last_received_cmd = msg;

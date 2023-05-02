@@ -51,7 +51,8 @@ void loop(){
 #if defined(USE_QUIRC)
   //QRコード解析
   MSG_CMD cmd = MSG_CMD_UNK;
-  loop_quirc(g_rgb565, &cmd);
+  struct quirc_code* qrcode = NULL;
+  loop_quirc(g_rgb565, &cmd, &qrcode);
 
   #ifdef SUBCORE
   //QRコード 定義コマンド認識したらMainに送信
@@ -59,4 +60,16 @@ void loop(){
   #endif  //SUBCORE
 
 #endif  //USE_QUIRC
+
+#if defined(USE_LCD) && defined(USE_QUIRC)
+  //QRCODE枠表示
+  qrcode?
+    theTft->drawRect(
+      LCD_ORIGIN_X + qrcode->corners[0].x,
+      LCD_ORIGIN_Y + qrcode->corners[0].y,
+      qrcode->corners[1].x - qrcode->corners[0].x,
+      qrcode->corners[2].y - qrcode->corners[0].y,
+      0xf800):
+    void(0);
+#endif  //USE_LCD
 }
