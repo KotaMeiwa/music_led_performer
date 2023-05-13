@@ -26,6 +26,8 @@ struct quirc* qr = NULL;
 //for MP
 #define SUB_LCD_QUIRC 1
 #define SUB_LED_STRAP 2
+#define SUB_PHOTOCELL 3
+
 enum MSGIDs{
   MSGIDs_IMG = 0,
   MSGIDs_CMD

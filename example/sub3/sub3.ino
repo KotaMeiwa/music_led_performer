@@ -7,7 +7,7 @@
 //Configuration
 #define READ_PIN 0
 
-//抵抗と光センサを直列つなぎ。光センサ側を＋へ。
+//抵抗と光センサを直列つなぎ。光センサ側を - へ。
 //抵抗 1K ohm
 //光センサ 明るい 0.5K ohm, 暗い 50K ohm
 const int g_val_min = 1024 * 1/3;   //明るい  0.5K / (0.5K + 1K) = 1/3
@@ -46,11 +46,11 @@ void loop()
   static MSG_CMD last_msg_cmd = MSG_CMD_UNK;
 
   //テンポラリ実装
-  //Level 3以下＝明るい ならRUN。
-  MSG_CMD msg_cmd = level<=3? MSG_CMD_RUN: MSG_CMD_STILL;
+  //Level 2以下＝明るい ならRUN。
+  MSG_CMD msg_cmd = level<=2? MSG_CMD_RUN: MSG_CMD_STILL;
   msg_cmd!=last_msg_cmd? MP.Send(MSGIDs_CMD, last_msg_cmd=msg_cmd): 0;
 #endif  //SUBCORE
 
-  Serial.printf("min=%d, max=%d, step=%d, val=%d, level=%d \n", g_val_min, g_val_max, g_val_step, val, level);
+  //Serial.printf("min=%d, max=%d, step=%d, val=%d, level=%d \n", g_val_min, g_val_max, g_val_step, val, level);
   delay(500);
 }

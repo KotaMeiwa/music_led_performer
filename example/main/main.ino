@@ -16,13 +16,14 @@
 
 //Configuration
 #define USE_AUDIO
-#define USE_CAMERA
+//#define USE_CAMERA
 #if defined(USE_CAMERA)
 //  #define USE_LCD
 //  #define USE_QUIRC
 #endif
-#define USE_SUB_LCD_QUIRC
+//#define USE_SUB_LCD_QUIRC
 #define USE_SUB_LED_STRAP
+#define USE_SUB_PHOTOCELL
 
 //For Audio
 #if defined(USE_AUDIO)
@@ -157,12 +158,17 @@ static bool setup_multi_core()
   Serial.println(ret < 0? "subcore1 not started": "subcore1 started");
 #endif
 
+#if defined(USE_SUB_PHOTOCELL)
+  ret = MP.begin(SUB_PHOTOCELL);
+  Serial.println(ret < 0? "subcore3 not started": "subcore3 started");
+#endif
+
 #if defined(USE_SUB_LED_STRAP)
   ret = MP.begin(SUB_LED_STRAP);
   Serial.println(ret < 0? "subcore2 not started": "subcore2 started");
 #endif
 
-#if defined(USE_SUB_LCD_QUIRC) || defined(USE_SUB_LED_STRAP) 
+#if defined(USE_SUB_LCD_QUIRC) || defined(USE_SUB_LED_STRAP) || defined(USE_SUB_PHOTOCELL)
   MP.RecvTimeout(MP_RECV_POLLING);
 #endif
 
@@ -216,11 +222,17 @@ void loop()
   static MSG_CMD last_received_cmd = MSG_CMD_UNK;
 
 #if defined(USE_AUDIO)
-  #if defined(USE_SUB_LCD_QUIRC)
+  #if defined(USE_SUB_LCD_QUIRC) || defined(USE_SUB_PHOTOCELL)
   int8_t msgid =0; 
   uint32_t msg;
-  //QRCODEによる指示。Audioのみ制御
-  if(MP.Recv(&msgid, &msg, SUB_LCD_QUIRC)==MSGIDs_CMD){
+    #if defined(USE_SUB_LCD_QUIRC)
+    int subid = SUB_LCD_QUIRC;
+    #elif defined(USE_SUB_PHOTOCELL)
+    int subid = SUB_PHOTOCELL;
+    #endif
+
+  //QRCODE/Photocellによる指示。Audioのみ制御
+  if(MP.Recv(&msgid, &msg, subid)==MSGIDs_CMD){
     //Commandによる制御
     Serial.printf("cmd = %d, audio status=%d \n", msg, theSpAudio->readState());
     
@@ -228,7 +240,7 @@ void loop()
     last_received_cmd = msg;
     control_audio(last_received_cmd);
   }
-  #endif  //USE_SUB_LCD_QUIRC
+  #endif  //USE_SUB_LCD_QUIRC || USE_SUB_PHOTOCELL
 
   //File-endによるStop状態 -> 先頭から再生
   if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP){
