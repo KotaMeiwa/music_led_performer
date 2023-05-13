@@ -7,6 +7,8 @@
 // one (main) is controller of audio + camera,
 // other (sub1) is controller of LCD display + QR code,
 // other (sub2) is controller of LED strap.
+// other (sub3) is controller of Photocell
+// Both sub1 and sub2 can't be used at the same time.
 ///////////////////////////////////////
 
 #include <MP.h>
@@ -14,6 +16,7 @@
 #include <SP_AudioPlayer.h>
 #include "music_led_performer.h"
 
+///////////////////////////////////
 //Configuration
 #define USE_AUDIO
 //#define USE_CAMERA
@@ -25,10 +28,18 @@
 #define USE_SUB_LED_STRAP
 #define USE_SUB_PHOTOCELL
 
+///////////////////////////////////
+//Both can't be active at the same time.   Photocell is higher prioritized.
+#if defined(USE_SUB_LCD_QUIRC) && defined(USE_SUB_PHOTOCELL)
+  #undef USE_SUB_LCD_QUIRC
+#endif
+
+///////////////////////////////////
 //For Audio
 #if defined(USE_AUDIO)
   SP_AudioPlayer* theSpAudio = NULL;
-  const char g_fileName[] = {"Sound.mp3"};
+  const char g_fileName[] = {"Sound.mp3"};    //audio file
+  const bool g_audio_initial_state = false;   //if true, audio starts soon after system is ready.
 #endif
 
 // Declaration of function
@@ -45,33 +56,36 @@ static void loop_audio();
 ///////////////////////////////////////
 static bool control_audio(MSG_CMD cmd)
 {
-  bool ret = true;
+  bool ret = false;
   
   switch(cmd){
     case MSG_CMD_RUN:
       if(theSpAudio->isPaused()){
         theSpAudio->resume();
+        ret = true;
       }
       else if(theSpAudio->isStopped()){
         theSpAudio->mp3play(g_fileName, false);
+        ret = true;
       }
       break;
     
     case MSG_CMD_STILL:
       if(theSpAudio->isPlaying()){
         theSpAudio->pause();
+        ret = true;
       }
       break;
 
     case MSG_CMD_STOP:
       if(!theSpAudio->isStopped()){
         theSpAudio->stop();
+        ret = true;
       }
       break;
 
     default:
       Serial.printf("control_audio received bad command %d \n", cmd);
-      ret = false;
       break;
   }
   
@@ -122,7 +136,9 @@ static bool setup_audio()
   theSpAudio->begin();
   theSpAudio->volume(-200);
 
-  theSpAudio->mp3play(g_fileName, false);
+  if(g_audio_initial_state){
+    control_audio(MSG_CMD_RUN);
+  }
 
   Serial.println("SP_Audio Ready!");
 
@@ -237,20 +253,19 @@ void loop()
     Serial.printf("cmd = %d, audio status=%d \n", msg, theSpAudio->readState());
     
     //Audio制御
-    last_received_cmd = msg;
-    control_audio(last_received_cmd);
+    last_received_cmd = (control_audio(MSG_CMD(msg))? msg: last_received_cmd);
   }
   #endif  //USE_SUB_LCD_QUIRC || USE_SUB_PHOTOCELL
 
   //File-endによるStop状態 -> 先頭から再生
-  if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP){
+  if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP && last_received_cmd!=MSG_CMD_UNK){
     control_audio(MSG_CMD_RUN);
   }
 
   #if defined(USE_SUB_LED_STRAP)
   //LED StrapはAudioに連動
   static MSG_CMD last_sent_cmd = MSG_CMD_UNK;
-  if(last_sent_cmd!=MSG_CMD_STOP && (theSpAudio->isStopped() || theSpAudio->isPaused())){
+  if((last_sent_cmd!=MSG_CMD_STOP) && (theSpAudio->isStopped() || theSpAudio->isPaused())){
     //LED Strap制御
     Serial.println("strap stop");
     control_led_strap(last_sent_cmd = MSG_CMD_STOP);
