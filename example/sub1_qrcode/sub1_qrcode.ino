@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <MP.h>
-#include "music_led_performer.h"
+#include "music_led_performer_lcd_qrcode.h"
 
 //Configuration
 #define USE_LCD

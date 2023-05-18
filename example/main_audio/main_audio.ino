@@ -21,8 +21,8 @@
 #define USE_AUDIO
 //#define USE_CAMERA
 #if defined(USE_CAMERA)
-//  #define USE_LCD
-//  #define USE_QUIRC
+  #define USE_LCD
+  #define USE_QUIRC
 #endif
 //#define USE_SUB_LCD_QUIRC
 #define USE_SUB_LED_STRAP
@@ -32,6 +32,12 @@
 //Both can't be active at the same time.   Photocell is higher prioritized.
 #if defined(USE_SUB_LCD_QUIRC) && defined(USE_SUB_PHOTOCELL)
   #undef USE_SUB_LCD_QUIRC
+#endif
+
+///////////////////////////////////
+//For LCD & QRCODE
+#if defined(USE_LCD) || defined(USE_QUIRC)
+  #include "music_led_performer_lcd_qrcode.h"
 #endif
 
 ///////////////////////////////////
