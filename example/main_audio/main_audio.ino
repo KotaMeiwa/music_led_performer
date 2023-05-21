@@ -42,11 +42,9 @@
 
 ///////////////////////////////////
 //For Audio
-#if defined(USE_AUDIO)
-  SP_AudioPlayer* theSpAudio = NULL;
-  const char g_fileName[] = {"Sound.mp3"};    //audio file
-  const bool g_audio_initial_state = false;   //if true, audio starts soon after system is ready.
-#endif
+SP_AudioPlayer* theSpAudio = NULL;
+const char g_fileName[] = {"Sound.mp3"};    //audio file
+const bool g_audio_initial_state = false;   //if true, audio starts soon after system is ready.
 
 // Declaration of function
 static bool control_audio(MSG_CMD cmd);
