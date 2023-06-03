@@ -26,7 +26,7 @@
 #endif
 //#define USE_SUB_LCD_QUIRC
 #define USE_SUB_LED_STRAP
-#define USE_SUB_PHOTOCELL
+//#define USE_SUB_PHOTOCELL
 
 ///////////////////////////////////
 //Both can't be active at the same time.   Photocell is higher prioritized.
@@ -44,7 +44,8 @@
 //For Audio
 SP_AudioPlayer* theSpAudio = NULL;
 const char g_fileName[] = {"Sound.mp3"};    //audio file
-const bool g_audio_initial_state = false;   //if true, audio starts soon after system is ready.
+const int g_audio_volume = -400;           //Audio volume Min: -1020(-102db)  Max: 120(12db)
+const bool g_audio_initial_state = true;   //if true, audio starts soon after system is ready.
 
 // Declaration of function
 static bool control_audio(MSG_CMD cmd);
@@ -138,10 +139,11 @@ static bool setup_audio()
 {
   theSpAudio = new SP_AudioPlayer;
   theSpAudio->begin();
-  theSpAudio->volume(-200);
+  theSpAudio->volume(g_audio_volume);
 
   if(g_audio_initial_state){
     control_audio(MSG_CMD_RUN);
+    delay(2000); //Stop -> Play状態になるまで時間かかるので少し待つ。
   }
 
   Serial.println("SP_Audio Ready!");
@@ -262,8 +264,15 @@ void loop()
   #endif  //USE_SUB_LCD_QUIRC || USE_SUB_PHOTOCELL
 
   //File-endによるStop状態 -> 先頭から再生
-  if(theSpAudio->isStopped() && last_received_cmd!=MSG_CMD_STOP && last_received_cmd!=MSG_CMD_UNK){
-    control_audio(MSG_CMD_RUN);
+  if(theSpAudio->isStopped()){
+    if(g_audio_initial_state){
+      if(last_received_cmd!=MSG_CMD_STOP)
+        control_audio(MSG_CMD_RUN);
+    }
+    else{
+      if(last_received_cmd!=MSG_CMD_STOP && last_received_cmd!=MSG_CMD_UNK)
+        control_audio(MSG_CMD_RUN);
+    }
   }
 
   #if defined(USE_SUB_LED_STRAP)
