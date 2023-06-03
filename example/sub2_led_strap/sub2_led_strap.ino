@@ -3,12 +3,20 @@
 
 #include <MP.h>
 #include <Adafruit_NeoPixel_Spresense.h>
+#include <NeoPixelPerformer.h>
 #include <music_led_performer.h>
 
-const uint16_t NUM_PIXELS = 8;
+const uint16_t NUM_PIXELS = 12;
 const uint16_t PIN = 0;
+typedef Adafruit_NeoPixel_Spresense NEOPIXEL_CLASS;
+NEOPIXEL_CLASS neopixel(NUM_PIXELS, PIN);
+CNeoPixelPerformer<NEOPIXEL_CLASS> performer(&neopixel);
 
-Adafruit_NeoPixel_Spresense* neopixel = NULL;;
+const uint32_t g_color[8] = {
+                    Adafruit_NeoPixel::Color(16, 0, 0), Adafruit_NeoPixel::Color(0, 16, 0),
+                    Adafruit_NeoPixel::Color(0, 0, 16), Adafruit_NeoPixel::Color(16, 16, 0),
+                    Adafruit_NeoPixel::Color(0, 16, 16), Adafruit_NeoPixel::Color(16, 0, 16),
+                    Adafruit_NeoPixel::Color(0, 0, 0), Adafruit_NeoPixel::Color(16, 16, 16)};
 
 ///////////////////////////////////////
 void setup()
@@ -22,14 +30,16 @@ void setup()
 	delay(1000);
 	Serial.println("serial console start!");
 
-  neopixel = new Adafruit_NeoPixel_Spresense(NUM_PIXELS, PIN);
-	neopixel->begin();
+	neopixel.begin();
 }
 
 ///////////////////////////////////////
 void loop()
 {
-  static bool on = true;
+  static bool on = false;
+  uint32_t rgb0 = g_color[0];
+  uint32_t rgb1 = g_color[1];
+  ulong speed = 500;
 
 #ifdef SUBCORE
   //Mainからコマンド受信
@@ -42,10 +52,9 @@ void loop()
 
   if(on){
     //Blink
-    neopixel->fill(Adafruit_NeoPixel::Color(8, 8, 0)); neopixel->show(), delay(500);
-    neopixel->fill(Adafruit_NeoPixel::Color(8, 0, 0)); neopixel->show(), delay(500);
+    performer.blink(speed, rgb0, rgb1);
   }
   else{
-    neopixel->fill(Adafruit_NeoPixel::Color(0, 0, 0)); neopixel->show(), delay(500);
+    performer.static_color(500, Adafruit_NeoPixel::Color(0, 0, 0));
   }
 }
