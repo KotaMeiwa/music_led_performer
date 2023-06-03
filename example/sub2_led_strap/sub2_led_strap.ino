@@ -36,7 +36,7 @@ void setup()
 ///////////////////////////////////////
 void loop()
 {
-  static bool on = false;
+  static bool on = true;
   uint32_t rgb0 = g_color[0];
   uint32_t rgb1 = g_color[1];
   ulong speed = 500;
